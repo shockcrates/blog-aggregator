@@ -10,40 +10,40 @@ type Config = {
 export function setUser(user: string){
     const config: Config = readConfig()
     config.currentUserName = user;
-    const toLoad = JSON.stringify(config);
-    fs.writeFileSync(getConfigFilePath(), toLoad);
+    writeConfig(config);
 }
 
 export function readConfig(): Config{
-    const contents = fs.readFileSync(getConfigFilePath(), "utf8");
-    const rawConfig = JSON.parse(contents);
-    const CONFIG: Config = validateConfig(rawConfig);
-    if (CONFIG.dbUrl == "" && CONFIG.currentUserName == ""){
-        console.log("Config file read unsuccessful");
-    }
-    return CONFIG;
+    const data = fs.readFileSync(getConfigFilePath(), "utf8");
+    const rawConfig = JSON.parse(data);
+    const config: Config = validateConfig(rawConfig);
+    return config;
 }
 
 function getConfigFilePath(): string{
+    const configFileName = ".gatorconfig.json"
     const home = os.homedir();
-    return path.join(home, ".gatorconfig.json")
+    return path.join(home, configFileName);
 }
 
 function writeConfig(cfg: Config){
-    const configJSON = JSON.stringify(cfg);
+    const configJSON = JSON.stringify(cfg, null, 2);
     const home = getConfigFilePath();
-    fs.writeFileSync(home, configJSON);
+    fs.writeFileSync(home, configJSON, {encoding: "utf-8"});
 }
 
 function validateConfig(rawConfig: any): Config{
     if (!rawConfig.dbUrl || typeof rawConfig.dbUrl !== "string"){
         throw new Error("db_url is required for the config file");
     }
-
-
-    if (typeof rawConfig === "object" && "dbUrl" in rawConfig
-        && "currentUserName" in rawConfig){
-        return rawConfig as Config
+    if (!rawConfig.currentUserName || typeof rawConfig.currentUserName !== "string"){
+        throw new Error("current_user_name is required for the config file");
     }
-    else return {dbUrl: "string", currentUserName : ""};
+
+    const config: Config = {
+        dbUrl: rawConfig.dbUrl,
+        currentUserName: rawConfig.currentUserName,
+    };
+
+    return config;
 }

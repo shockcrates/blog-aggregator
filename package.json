@@ -9,9 +9,15 @@
   },
   "devDependencies": {
     "@types/node": "^24.2.0",
+    "drizzle-kit": "^0.31.4",
     "tsx": "^4.20.3",
     "typescript": "^5.9.2"
   },
   "type": "module",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "drizzle-orm": "^0.44.4",
+    "fast-xml-parser": "^5.2.5",
+    "postgres": "^3.4.7"
+  }
 }
