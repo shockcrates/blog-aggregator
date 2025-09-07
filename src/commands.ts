@@ -1,6 +1,6 @@
 import {readConfig, setUser} from "./config.js";
 import { createUser, getUser, deleteAllUsers, getUsers, User } from "./lib/db/queries/users.js";
-import { createFeeds, Feed , getAllFeeds, createFeedFollow, getFeedByURL, getFeedFollowsForUser, deleteFeedFollow} from "./lib/db/queries/feeds.js";
+import { createFeeds, Feed , getAllFeeds, createFeedFollow, getFeedByURL, getFeedFollowsForUser, deleteFeedFollow, getNextFeedToFetch, markFeedFetched} from "./lib/db/queries/feeds.js";
 import { FetchFeed, RSSFeed } from "./RSS.js"
 
 
@@ -87,10 +87,27 @@ export async function getUsersHandler(cmdName:string, ...args: string[]) {
 }
 
 export async function aggregateHandler(cmdName:string, ...args: string[]) {
-    const FeedUrl = args[0];
-    const rssFeed = await FetchFeed("https://www.wagslane.dev/index.xml");
+    const timeBetweenRequests = args[0];
+    const num = parseDuration(timeBetweenRequests);
+    console.log(num);
 
-    console.log(JSON.stringify(rssFeed));
+    scrapeFeeds().catch(console.error);
+
+    const interval = setInterval(() =>{
+        scrapeFeeds().catch(console.error);
+    }, num);
+
+    await new Promise<void>((resolve) => {
+        process.on("SIGINT", ()=>{
+            console.log("Shuting down aggregator");
+            clearInterval(interval);
+            resolve();
+        });
+    });
+
+    //const rssFeed = await FetchFeed("https://www.wagslane.dev/index.xml");
+
+    //console.log(JSON.stringify(rssFeed));
 }
 
 export async function addFeedHandler(cmdName:string, user: User, ...args: string[]){
@@ -182,5 +199,52 @@ function printFeed(feed: Feed, user: User){
     console.log(JSON.stringify(user));
     console.log("Feed:");
     console.log(JSON.stringify(feed));
+}
+
+async function scrapeFeeds(){
+    //Get next feed
+    const nextFeed = await getNextFeedToFetch();
+    //Mark it as fetched
+    await markFeedFetched(nextFeed.id);
+    //Fetch the feed
+    const feedResult = await FetchFeed(nextFeed.url);
+    //iterate over and print items in feed
+    console.log("Feed:", feedResult.channel.title);
+    for (const item of feedResult.channel.item){
+        console.log(item.title);
+    }
+
+}
+
+
+
+function parseDuration(durationStr: string):number{
+    const regex = /^(\d)+(ms|s|m|h)$/;
+    const match = durationStr.match(regex);
+    if (match) {
+        if (!isNaN(parseFloat(match[1]))) {
+            const value = parseFloat(match[1]);
+            const unit = match[2];
+            switch (unit){
+                case "ms":
+                    return value;
+                case "s":
+                    return value * 1000;
+                case "m":
+                    return value * 1000 * 60;
+                case "h":
+                    return value * 1000 * 60 * 60;
+                default:
+                    throw Error(`Invalid duration unit`);
+            }
+
+        }
+        else {
+            throw new Error("Invalid duration str");
+        }
+    } else {
+        console.log("no match");
+        throw new Error("Time duration is not valid. Give as #ms | #s | #m | #h")
+    }
 }
 

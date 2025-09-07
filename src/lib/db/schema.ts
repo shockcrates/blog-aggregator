@@ -17,6 +17,7 @@ export const feeds = pgTable("feeds", {
         .defaultNow()
         .notNull()
         .$onUpdate(()=>new Date()),
+    lastFetchedAt: timestamp("lastFetchedAt"),
     name: text("name").notNull(),
     url: text("url").notNull().unique(),
     user_id: uuid("user_id")
