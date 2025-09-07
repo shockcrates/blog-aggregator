@@ -1,6 +1,7 @@
 import {setUser, readConfig} from "./config.js"
 import {CommandsRegistry, runCommand, registerCommand, loginHandler,
-    registerUserHandler, resetHandler, getUsersHandler, aggregateHandler} from "./commands.js";
+    registerUserHandler, resetHandler, getUsersHandler, aggregateHandler,
+    addFeedHandler, feedsHandler, followHandler, followingHandler, getLoggedInUser, unfollowHandler } from "./commands.js";
 
 export async function main(){
     const registry: CommandsRegistry = {};
@@ -9,6 +10,12 @@ export async function main(){
     await registerCommand(registry, "reset", resetHandler);
     await registerCommand(registry, "users", getUsersHandler);
     await registerCommand(registry, "agg", aggregateHandler);
+    await registerCommand(registry, "addfeed", getLoggedInUser(addFeedHandler));
+    await registerCommand(registry, "feeds", feedsHandler);
+    await registerCommand(registry, "follow", getLoggedInUser(followHandler));
+    await registerCommand(registry, "following", getLoggedInUser(followingHandler));
+    await registerCommand(registry, "unfollow", getLoggedInUser(unfollowHandler));
+
     if (process.argv.length < 1) {
         console.error("Need at least one argument");
         process.exit(1);
