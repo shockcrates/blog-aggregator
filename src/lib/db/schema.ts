@@ -52,3 +52,23 @@ export const feed_follows = pgTable("feed_follows", {
     }).onDelete('cascade'),
     unique("feed_user_id").on(table.feed_id, table.user_id)
 ]);
+
+export const posts = pgTable("posts", {
+    id: uuid("id").primaryKey().defaultRandom().notNull(),
+    createdAt: timestamp("createdAt").defaultNow(),
+    updatedAt: timestamp("updatedAt")
+        .defaultNow()
+        .notNull()
+        .$onUpdate(()=>new Date()),
+    title: text("title").notNull(),
+    url: text("url").notNull().unique(),
+    description: text("description"),
+    publishedAt: timestamp("publishedAt"),
+    feed_id: uuid("feed_id"),
+}, (table) => [
+    foreignKey({
+        name: "feed_id_fk",
+        columns: [table.feed_id],
+        foreignColumns: [feeds.id],
+    }).onDelete('cascade'),
+]);

@@ -2,6 +2,7 @@ import {readConfig, setUser} from "./config.js";
 import { createUser, getUser, deleteAllUsers, getUsers, User } from "./lib/db/queries/users.js";
 import { createFeeds, Feed , getAllFeeds, createFeedFollow, getFeedByURL, getFeedFollowsForUser, deleteFeedFollow, getNextFeedToFetch, markFeedFetched} from "./lib/db/queries/feeds.js";
 import { FetchFeed, RSSFeed } from "./RSS.js"
+import {createPost, getPostsForUser} from "./lib/db/queries/posts.js";
 
 
 type CommandHandler = (cmdName:string, ...args: string[]) => Promise<void>;
@@ -184,6 +185,21 @@ export async function unfollowHandler(cmdname: string, user: User, ...args: stri
     await deleteFeedFollow(feedUrl, user.id);
 }
 
+export async function browseHandler(cmdName: string, user: User, ...args: string[]){
+    const limit = args[0];
+    const limitNum = parseInt(limit);
+    if (typeof limitNum !== "number"){
+        throw Error("Limit must be a number");
+    }
+
+    const usersPosts = await getPostsForUser(user.id, limitNum);
+    for (const post of usersPosts){
+        console.log("Title: " + post.name);
+        console.log(`URL: ${post.url}`)
+        console.log(` Description: ${post.description}\n`);
+    }
+}
+
 export type CommandsRegistry = Record<string, CommandHandler>;
 
 export async function registerCommand(registry: CommandsRegistry, cmdName: string, cmdHandler: CommandHandler) {
@@ -209,11 +225,14 @@ async function scrapeFeeds(){
     //Fetch the feed
     const feedResult = await FetchFeed(nextFeed.url);
     //iterate over and print items in feed
-    console.log("Feed:", feedResult.channel.title);
-    for (const item of feedResult.channel.item){
-        console.log(item.title);
-    }
 
+
+    //save to posts
+    for (const item of feedResult.channel.item){
+            const date = new Date(item.pubDate);
+            const postResult = await createPost(item.link, item.title, item.description, date, nextFeed.id)
+            console.log(postResult);
+    }
 }
 
 
@@ -246,5 +265,11 @@ function parseDuration(durationStr: string):number{
         console.log("no match");
         throw new Error("Time duration is not valid. Give as #ms | #s | #m | #h")
     }
+}
+
+function parsePublishedDate(pubStr: string){
+    const trimmedDate = pubStr.slice(5, 25);
+    console.log(trimmedDate);
+    const date = new Date(pubStr);
 }
 
